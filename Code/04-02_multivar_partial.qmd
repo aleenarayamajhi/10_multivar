@@ -102,7 +102,7 @@ library(ggpmisc)
 ```
 
 ```{r}
-weather 
+weather <- read_csv("../data/weather_monthsum.csv")
 
 weather
 ```
@@ -114,7 +114,9 @@ How are variables related? Any strong correlations that we should watch out for?
 Let's create a correlation matrix
 ```{r correlation matrix p-values}
 # Estimating significance matrix
-p.mat 
+p.mat <- weather %>%
+  dplyr::select(-year, -site) %>%
+  cor_pmat()
 
 p.mat
 ```
@@ -246,14 +248,20 @@ weather %>%
   ggplot(aes(x = mean_dayl.s_Apr, 
              y = mean_dayl.s_May))+
   geom_point() +
-  geom_smooth(method="lm")
+  geom_smooth(method="lm") +
+  stat_correlation()
 
 ```
 
 Now let's fit some models with one or two uncorrelated and correlated variables explaining fiberstrength and see what happens.  
 
 ```{r strength ~ mean_dayl.s_Apr}
-lm_dayl.apr 
+lm_dayl.apr <- lm(strength_gtex ~ mean_dayl.s_Apr,
+                  data = weather
+                  ) %>%
+  tidy() %>%
+  filter(term != "(Intercept)") %>%
+  mutate(mod = "lm_dayl.apr")
 
 lm_dayl.apr
 
@@ -304,7 +312,12 @@ lm_dayl.apr %>%
                              "lm_2var.uncor",
                              "lm_2var.cor"))) %>%
   filter(term != "mean_dayl.s_May") %>%
-  ggplot(aes(x=mod))
+  ggplot(aes(x=mod))+
+  geom_pointrange(aes(y =estimate,
+                      ymin = estimate - std.error,
+                      ymax = estimate + std.error)) +
+  facet_wrap(~ term, scales = "free_y") +
+  scale_x_discrete(guide = guide_axis(n.dodge = 2))
 
 ```
 
@@ -322,6 +335,10 @@ General rule of thumb:
 Let's check the variance inflation factor (VIF) of both uncorrelated and correlated models
 ```{r vif uncorrelated}
 # Uncorrelated
+lm(strength_gtex ~ mean_dayl.s_Apr + 
+                   sum_prcp.mm_Oct,
+   data = weather) %>%
+  vif()
 ```
 
 
